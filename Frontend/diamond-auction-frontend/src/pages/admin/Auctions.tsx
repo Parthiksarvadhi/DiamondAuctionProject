@@ -15,7 +15,7 @@ import {
   setAuctionActive,
 } from "../../store/slices/auctionSlice";
 import { fetchDiamonds as fetchDiamondsList } from "../../store/slices/diamondSlice";
-import { getBidHistory } from "../../api/bids.api";
+import { getBidHistory } from "../../services/bidService";
 import Modal from "../../components/Modal";
 import type { BidAuction } from "../../types";
 
@@ -287,7 +287,7 @@ export default function AdminAuctions() {
       console.log("Admin bid history response:", response.data);
       
       // Parse history field if it's a string
-      const processedHistory = response.data.bid_history?.map((bid: any) => {
+      const processedHistory = (response.data as any).bid_history?.map((bid: any) => {
         try {
           return {
             ...bid,

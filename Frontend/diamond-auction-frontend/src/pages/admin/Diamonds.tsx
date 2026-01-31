@@ -9,6 +9,7 @@ import {
   restoreDiamondById,
   hardDeleteDiamondById,
 } from "../../store/slices/diamondSlice";
+import { fetchBids } from "../../store/slices/auctionSlice";
 import Modal from "../../components/Modal";
 import { getImageUrlWithFallback } from "../../utils/imageUtils";
 import type { Diamond } from "../../types";
@@ -18,6 +19,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5001";
 export default function AdminDiamonds() {
   const dispatch = useAppDispatch();
   const { list, loading, error } = useAppSelector((s) => s.diamonds);
+  const { list: auctions } = useAppSelector((s) => s.auctions);
   const [showDeleted, setShowDeleted] = useState(false);
   const [editModal, setEditModal] = useState<Diamond | null>(null);
   const [createModal, setCreateModal] = useState(false);
@@ -26,9 +28,44 @@ export default function AdminDiamonds() {
 
   useEffect(() => {
     dispatch(fetchDiamonds({ deleted: showDeleted }));
+    dispatch(fetchBids()); // Fetch auctions to determine diamond status
   }, [dispatch, showDeleted]);
 
   const displayList = showDeleted ? list.filter((d) => d.is_deleted) : list.filter((d) => !d.is_deleted);
+
+  // Function to get diamond status based on auction data
+  const getDiamondStatus = (diamond: Diamond) => {
+    if (diamond.is_deleted) {
+      return { text: "Deleted", color: "text-red-600", bg: "bg-red-100" };
+    }
+
+    // Find auctions for this diamond
+    const diamondAuctions = auctions.filter(auction => auction.diamond_id === diamond.id);
+    
+    if (diamondAuctions.length === 0) {
+      return { text: "Available", color: "text-green-600", bg: "bg-green-100" };
+    }
+
+    // Check for active auction
+    const activeAuction = diamondAuctions.find(auction => auction.status === "active");
+    if (activeAuction) {
+      return { text: "In Auction", color: "text-amber-600", bg: "bg-amber-100" };
+    }
+
+    // Check for draft auction
+    const draftAuction = diamondAuctions.find(auction => auction.status === "draft");
+    if (draftAuction) {
+      return { text: "Scheduled", color: "text-blue-600", bg: "bg-blue-100" };
+    }
+
+    // Check for closed auction (sold)
+    const closedAuction = diamondAuctions.find(auction => auction.status === "closed");
+    if (closedAuction) {
+      return { text: "Sold", color: "text-purple-600", bg: "bg-purple-100" };
+    }
+
+    return { text: "Available", color: "text-green-600", bg: "bg-green-100" };
+  };
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -131,7 +168,31 @@ export default function AdminDiamonds() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Manage Diamonds</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Manage Diamonds</h1>
+          <div className="flex items-center gap-4 mt-2 text-xs">
+            <div className="flex items-center gap-1">
+              <span className="px-2 py-1 rounded-full bg-green-100 text-green-600 font-medium">Available</span>
+              <span className="text-slate-500">Ready for auction</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-600 font-medium">Scheduled</span>
+              <span className="text-slate-500">Auction created</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="px-2 py-1 rounded-full bg-amber-100 text-amber-600 font-medium">In Auction</span>
+              <span className="text-slate-500">Currently bidding</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="px-2 py-1 rounded-full bg-purple-100 text-purple-600 font-medium">Sold</span>
+              <span className="text-slate-500">Auction completed</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="px-2 py-1 rounded-full bg-red-100 text-red-600 font-medium">Deleted</span>
+              <span className="text-slate-500">Soft deleted</span>
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-4">
           <label className="flex items-center gap-2">
             <input
@@ -199,7 +260,7 @@ export default function AdminDiamonds() {
                   <th className="px-4 py-3 font-medium">Image</th>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Base Price</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Status & Auction Info</th>
                   <th className="px-4 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
@@ -239,11 +300,49 @@ export default function AdminDiamonds() {
                       {d.base_price ? `$${Number(d.base_price).toFixed(2)}` : "—"}
                     </td>
                     <td className="px-4 py-3">
-                      {d.is_deleted ? (
-                        <span className="text-red-600">Deleted</span>
-                      ) : (
-                        <span className="text-green-600">Active</span>
-                      )}
+                      {(() => {
+                        const status = getDiamondStatus(d);
+                        const diamondAuctions = auctions.filter(auction => auction.diamond_id === d.id);
+                        const activeAuction = diamondAuctions.find(auction => auction.status === "active");
+                        const draftAuction = diamondAuctions.find(auction => auction.status === "draft");
+                        const closedAuction = diamondAuctions.find(auction => auction.status === "closed");
+                        
+                        return (
+                          <div className="space-y-1">
+                            <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${status.color} ${status.bg}`}>
+                              {status.text}
+                            </span>
+                            
+                            {/* Show auction details */}
+                            {activeAuction && (
+                              <div className="text-xs text-slate-600">
+                                <div>Current: ${Number(activeAuction.current_price || activeAuction.base_bid_price || 0).toLocaleString()}</div>
+                                <div>Ends: {activeAuction.end_time ? new Date(activeAuction.end_time).toLocaleDateString() : 'No end time'}</div>
+                              </div>
+                            )}
+                            
+                            {draftAuction && (
+                              <div className="text-xs text-slate-600">
+                                <div>Base: ${Number(draftAuction.base_bid_price || 0).toLocaleString()}</div>
+                                <div>Starts: {draftAuction.start_time ? new Date(draftAuction.start_time).toLocaleDateString() : 'Manual start'}</div>
+                              </div>
+                            )}
+                            
+                            {closedAuction && (
+                              <div className="text-xs text-slate-600">
+                                <div>Sold: ${Number(closedAuction.winning_amount || 0).toLocaleString()}</div>
+                                <div>Winner: {closedAuction.winner_name || 'No winner'}</div>
+                              </div>
+                            )}
+                            
+                            {diamondAuctions.length === 0 && !d.is_deleted && (
+                              <div className="text-xs text-slate-500">
+                                Ready for auction
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 flex flex-wrap gap-2">
                       {!d.is_deleted && (

@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import * as walletApi from "../../api/wallet.api";
+import * as walletApi from "../../services/walletService";
 import type { WalletTransaction } from "../../types";
 
 interface WalletState {
@@ -21,7 +21,7 @@ export const fetchBalance = createAsyncThunk(
   async (_, thunkAPI) => {
     try {
       const res = await walletApi.getBalance();
-      return res.data?.balance ?? res.data?.wallet_balance ?? 0;
+      return (res.data as any)?.balance ?? (res.data as any)?.wallet_balance ?? 0;
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
       return thunkAPI.rejectWithValue(err.response?.data?.error || "Failed");

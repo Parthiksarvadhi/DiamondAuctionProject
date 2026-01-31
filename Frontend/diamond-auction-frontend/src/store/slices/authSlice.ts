@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { loginApi, validateTokenApi } from "../../api/auth.api";
+import { loginApi, validateTokenApi } from "../../services/authService";
 
 interface User {
   id: string;
@@ -53,7 +53,7 @@ export const validateToken = createAsyncThunk(
       
       // Call API to validate token
       const res = await validateTokenApi();
-      const user = res.data.user || getStoredUser();
+      const user = (res.data as any).user || getStoredUser();
       
       if (!user) throw new Error("No user found");
       

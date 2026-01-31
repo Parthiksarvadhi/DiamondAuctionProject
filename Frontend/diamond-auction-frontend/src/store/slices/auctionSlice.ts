@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import * as bidsApi from "../../api/bids.api";
+import * as bidsApi from "../../services/bidService";
 import type { BidAuction } from "../../types";
 
 interface AuctionState {
@@ -125,7 +125,7 @@ export const softDeleteAuction = createAsyncThunk(
   async (id: string, thunkAPI) => {
     try {
       const res = await bidsApi.softDeleteBid(id);
-      return { id, ...res.data };
+      return { id, ...(res.data as any) };
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
       return thunkAPI.rejectWithValue(err.response?.data?.error || "Failed");
@@ -138,7 +138,7 @@ export const restoreAuction = createAsyncThunk(
   async (id: string, thunkAPI) => {
     try {
       const res = await bidsApi.restoreBid(id);
-      return { id, ...res.data };
+      return { id, ...(res.data as any) };
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
       return thunkAPI.rejectWithValue(err.response?.data?.error || "Failed");
@@ -151,7 +151,7 @@ export const hardDeleteAuction = createAsyncThunk(
   async (id: string, thunkAPI) => {
     try {
       const res = await bidsApi.hardDeleteBid(id);
-      return { id, ...res.data };
+      return { id, ...(res.data as any) };
     } catch (e: unknown) {
       const err = e as { response?: { data?: { error?: string } } };
       return thunkAPI.rejectWithValue(err.response?.data?.error || "Failed");
@@ -205,18 +205,18 @@ const auctionSlice = createSlice({
         state.completed = Array.isArray(action.payload) ? action.payload : [];
       })
       .addCase(createBid.fulfilled, (state, action) => {
-        if (action.payload) state.list.push(action.payload);
+        if (action.payload) state.list.push(action.payload as any);
       })
       .addCase(startAuctionById.fulfilled, (state, action) => {
-        const b = state.list.find((x) => x.id === action.payload?.id);
+        const b = state.list.find((x) => x.id === (action.payload as any)?.id);
         if (b) b.status = "active";
       })
       .addCase(stopAuctionById.fulfilled, (state, action) => {
-        const b = state.list.find((x) => x.id === action.payload?.id);
+        const b = state.list.find((x) => x.id === (action.payload as any)?.id);
         if (b) b.status = "closed";
       })
       .addCase(placeBidOnAuction.fulfilled, (state, action) => {
-        const updated = action.payload;
+        const updated = action.payload as any;
         if (updated) {
           const i = state.list.findIndex((x) => x.id === updated.id);
           if (i !== -1) state.list[i] = { ...state.list[i], ...updated };

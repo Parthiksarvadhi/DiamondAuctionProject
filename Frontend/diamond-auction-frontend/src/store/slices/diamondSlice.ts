@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import * as diamondsApi from "../../api/diamonds.api";
+import * as diamondsApi from "../../services/diamondService";
 import type { Diamond } from "../../types";
 
 interface DiamondState {
@@ -118,11 +118,11 @@ const diamondSlice = createSlice({
         state.error = (action.payload as string) || "Failed";
       })
       .addCase(createDiamond.fulfilled, (state, action) => {
-        if (action.payload) state.list.push(action.payload);
+        if (action.payload) state.list.push(action.payload as any);
       })
       .addCase(updateDiamondById.fulfilled, (state, action) => {
-        const i = state.list.findIndex((d) => d.id === action.payload?.id);
-        if (i !== -1 && action.payload) state.list[i] = action.payload;
+        const i = state.list.findIndex((d) => d.id === (action.payload as any)?.id);
+        if (i !== -1 && action.payload) state.list[i] = action.payload as any;
       })
       .addCase(softDeleteDiamondById.fulfilled, (state, action) => {
         const d = state.list.find((x) => x.id === action.payload);

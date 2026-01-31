@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import * as adminApi from "../../api/admin.api";
+import * as adminApi from "../../services/adminService";
 import type { AdminUser } from "../../types";
 
 interface UserState {
@@ -132,7 +132,7 @@ const userSlice = createSlice({
         state.list = state.list.filter((x) => x.id !== action.payload);
       })
       .addCase(createUser.fulfilled, (state, action) => {
-  state.list.unshift(action.payload);
+  state.list.unshift(action.payload as any);
 })
 
       .addCase(adjustUserWallet.fulfilled, (state, action) => {
